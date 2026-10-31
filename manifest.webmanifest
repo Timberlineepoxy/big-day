@@ -1,0 +1,16 @@
+{
+  "name": "Big Day",
+  "short_name": "Big Day",
+  "description": "Count down to Christmas, Easter and every American holiday, plus your own big days.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#7a0b1f",
+  "theme_color": "#7a0b1f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
