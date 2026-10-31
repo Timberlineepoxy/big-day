@@ -118,6 +118,12 @@ svg{display:block}
 .pill svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .pill.gold.on svg{fill:currentColor}
 .pill:active{transform:scale(.95)}
+.acts.music{margin-top:2px}
+.pill#mus span{max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill#mus.playing{background:#fff;color:#1d1b2e}
+.pill#mus.playing svg{animation:pop .6s ease-in-out infinite alternate}
+.by{font-size:13px;font-weight:800;opacity:.85;min-height:18px}
+.sw small a{color:inherit}
 .cards{display:flex;flex-direction:column;gap:12px;margin-top:16px;text-align:left}
 .card{background:var(--card);color:var(--ink);border-radius:24px;padding:16px 18px;box-shadow:0 6px 0 rgba(0,0,0,.12)}
 .card h3{margin:0 0 6px;font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -181,6 +187,7 @@ svg{display:block}
 <main id="app"></main>
 <script src="holidays.js"></script>
 <script src="art.js"></script>
+<script src="music.js"></script>
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');

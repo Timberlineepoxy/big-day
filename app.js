@@ -8,7 +8,7 @@ const DAY = 864e5;
 
 // ---- saved settings (this phone only) ----
 const KEY = 'bigday.v1';
-const DEFAULTS = { customs: [], featured: 'christmas', hidden: [], badge: false, sound: true, word: 'days', filter: 'all', look: 'auto' };
+const DEFAULTS = { customs: [], featured: 'christmas', hidden: [], badge: false, sound: true, music: true, word: 'days', filter: 'all', look: 'auto' };
 let S = load();
 function load() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEFAULTS }; }
@@ -83,8 +83,8 @@ function greeting(e) {
   return e.tone === 'calm' ? `Today is ${e.name}` : `Happy ${e.name}!`;
 }
 
-// ---- sound: tiny synthesizer, no audio files ----
-let AC = null, songStop = null;
+// ---- tap sounds: tiny synthesizer, no audio files ----
+let AC = null;
 function ac() {
   if (!AC) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; AC = new C(); }
   if (AC.state === 'suspended') AC.resume();
@@ -103,33 +103,41 @@ function pop() {
   const t = a.currentTime, base = 520 + Math.random() * 300;
   tone(base, t, 0.16, 0.14, 'sine'); tone(base * 1.5, t + 0.06, 0.2, 0.1, 'sine'); tone(base * 2, t + 0.12, 0.25, 0.07, 'sine');
 }
-const NOTES = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
-const freq = n => { const [, p, o] = n.match(/^([A-G]#?)(\d)$/); return 440 * 2 ** ((NOTES[p] + (Number(o) + 1) * 12 - 69) / 12); };
-// Public-domain tunes, written as NOTE:beats.
-const SONGS = {
-  jingle: { name: 'Jingle Bells', bpm: 210, n: 'E4:1 E4:1 E4:2 E4:1 E4:1 E4:2 E4:1 G4:1 C4:1.5 D4:.5 E4:4 F4:1 F4:1 F4:1.5 F4:.5 F4:1 E4:1 E4:1 E4:.5 E4:.5 E4:1 D4:1 D4:1 E4:1 D4:2 G4:2' },
-  wish: { name: 'We Wish You a Merry Christmas', bpm: 170, n: 'D4:1 G4:1 G4:.5 A4:.5 G4:.5 F#4:.5 E4:1 E4:1 E4:1 A4:1 A4:.5 B4:.5 A4:.5 G4:.5 F#4:1 D4:1 D4:1 B4:1 B4:.5 C5:.5 B4:.5 A4:.5 G4:1 E4:1 D4:.5 D4:.5 E4:1 A4:1 F#4:1 G4:3' },
-  yankee: { name: 'Yankee Doodle', bpm: 200, n: 'C4:.5 C4:.5 D4:.5 E4:.5 C4:.5 E4:.5 D4:.5 G3:.5 C4:.5 C4:.5 D4:.5 E4:.5 C4:1 B3:1 C4:.5 C4:.5 D4:.5 E4:.5 F4:.5 E4:.5 D4:.5 C4:.5 B3:.5 G3:.5 A3:.5 B3:.5 C4:1 C4:1' },
-  birthday: { name: 'Happy Birthday', bpm: 150, n: 'G4:.75 G4:.25 A4:1 G4:1 C5:1 B4:2 G4:.75 G4:.25 A4:1 G4:1 D5:1 C5:2 G4:.75 G4:.25 G5:1 E5:1 C5:1 B4:1 A4:2 F5:.75 F5:.25 E5:1 C5:1 D5:1 C5:2' },
-  fanfare: { name: 'Happy Tune', bpm: 180, n: 'C5:.5 E5:.5 G5:.5 C6:1 G5:.5 C6:2' },
-};
-function songFor(e) {
-  if (e.custom) return e.birthday ? 'birthday' : 'fanfare';
-  return e.song || (e.tone === 'party' ? 'fanfare' : null);
+// ---- holiday music: real recordings in music/ (see music.js) ----
+// One <audio> for the whole app: once a tap has started it, iPhones let it keep changing songs.
+const { TRACKS, playlistFor } = window.BD_MUSIC;
+const player = new Audio();
+player.preload = 'auto';
+let mus = { id: null, list: [], i: 0, blocked: false };
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const nowTrack = () => TRACKS[mus.list[mus.i]];
+// Start this holiday's playlist, unless it is already the one playing.
+function musicFor(e, anyway) {
+  if (!e || (!S.music && !anyway)) return;
+  if (mus.id === e.id && !player.paused) return;
+  if (mus.id !== e.id) { const [first, ...rest] = playlistFor(e); mus = { id: e.id, list: [first, ...shuffle(rest)], i: 0, blocked: false }; playTrack(); }
+  else player.play().catch(() => {});
 }
-function playSong(id, done) {
-  stopSong(); const a = ac(); if (!a) return;
-  const s = SONGS[id], beat = 60 / s.bpm, oscs = []; let t = a.currentTime + 0.05;
-  const shift = id === 'yankee' || id === 'jingle' ? 2 : 1; // play the low tunes an octave up, brighter on phone speakers
-  for (const tok of s.n.split(' ')) {
-    const [n, b] = tok.split(':'); const f = freq(n) * shift, d = Number(b) * beat;
-    oscs.push(tone(f, t, d * 0.95, 0.15, 'triangle'), tone(f * 2, t, d * 0.6, 0.04, 'sine'));
-    t += d;
-  }
-  const timer = setTimeout(() => { songStop = null; done && done(); }, (t - a.currentTime) * 1000);
-  songStop = () => { clearTimeout(timer); oscs.forEach(o => { try { o.stop(); } catch {} }); songStop = null; };
+function playTrack() {
+  player.src = `music/${mus.list[mus.i]}.mp3`;
+  const p = player.play();
+  if (p) p.catch(() => { mus.blocked = true; musicButton(); });
+  musicButton();
 }
-function stopSong() { if (songStop) songStop(); }
+function nextTrack() { if (!mus.list.length) return; mus.i = (mus.i + 1) % mus.list.length; playTrack(); }
+function stopMusic() { player.pause(); mus.id = null; }
+player.addEventListener('ended', nextTrack);
+player.addEventListener('playing', () => { mus.blocked = false; musicButton(); });
+player.addEventListener('pause', musicButton);
+// The music button on a holiday page shows the song that is playing.
+function musicButton() {
+  const b = $('#mus'); if (!b) return;
+  const on = !player.paused && !mus.blocked, t = nowTrack();
+  b.innerHTML = on && t ? `${I.pause}<span>${esc(t.t)}</span>` : `${I.note}<span>Play music</span>`;
+  b.classList.toggle('playing', on);
+  const n = $('#nxt'); if (n) n.hidden = !on;
+  const c = $('#by'); if (c) c.textContent = on && t ? `Played by the ${t.by}` : '';
+}
 
 // ---- drawing helpers ----
 const STAR_D = 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z';
@@ -141,6 +149,8 @@ const I = {
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   note: '<svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
   stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7zM18 5v14"/></svg>',
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
 };
 const grad = t => { const th = THEMES[t] || THEMES.party; return `linear-gradient(150deg,${th.bg[0]},${th.bg[1]})`; };
@@ -160,10 +170,10 @@ function applyLook() {
 
 // ---- screens ----
 function route() {
-  stopSong(); clearInterval(autoBurst);
+  clearInterval(autoBurst);
   const m = location.hash.match(/^#day=(.+)$/);
   const e = m && findEvent(decodeURIComponent(m[1]));
-  if (e) showDetail(e); else showHome();
+  if (e) showDetail(e); else { stopMusic(); showHome(); }
   window.scrollTo(0, 0);
 }
 
@@ -210,7 +220,7 @@ function showHome() {
     <button class="make" id="make">${I.plus}Make my own countdown</button>`;
   $('#app').onclick = ev => {
     const go = ev.target.closest('[data-go]'), fb = ev.target.closest('[data-f]');
-    if (go) { pop(); location.hash = 'day=' + encodeURIComponent(go.dataset.go); }
+    if (go) { pop(); musicFor(findEvent(go.dataset.go)); location.hash = 'day=' + encodeURIComponent(go.dataset.go); }
     else if (fb) { S.filter = fb.dataset.f; save(); showHome(); }
     else if (ev.target.closest('#make')) openEditor(null);
     else if (ev.target.closest('#set')) openSettings();
@@ -220,7 +230,7 @@ function showHome() {
 
 function showDetail(e) {
   applyTheme(e.theme);
-  const party = celebrating(e), p = parts(e), song = songFor(e), feat = S.featured === e.id;
+  const party = celebrating(e), p = parts(e), feat = S.featured === e.id;
   const prog = Math.max(0, Math.min(1, (Date.now() - e.prev) / (e.target - e.prev)));
   let weekends = 0;
   for (let d = new Date(today0().getTime() + DAY); d < e.next; d = new Date(d.getTime() + DAY)) if (d.getDay() === 6) weekends++;
@@ -244,9 +254,10 @@ function showDetail(e) {
       ${top}
       <div class="acts">
         <button class="pill gold${feat ? ' on' : ''}" id="feat">${I.star}${feat ? 'My big day' : 'Make it my big day'}</button>
-        ${song && S.sound ? `<button class="pill" id="song">${I.note}Play ${SONGS[song].name}</button>` : ''}
         ${e.custom ? `<button class="pill" id="edit">${I.pencil}Change</button>` : ''}
       </div>
+      <div class="acts music"><button class="pill" id="mus"></button><button class="pill" id="nxt" aria-label="Next song" hidden>${I.next}</button></div>
+      <div class="by" id="by"></div>
       <div class="cards">
         ${fun}
         ${e.about ? `<div class="card"><h3>What is ${esc(e.name)}?</h3><p>${esc(e.about)}</p></div>` : ''}
@@ -262,12 +273,14 @@ function showDetail(e) {
   $('#feat').onclick = () => { S.featured = e.id; save(); pop(); updateBadge(); toast(`${e.name} is your big day now!`); showDetail(findEvent(e.id)); };
   $('#share').onclick = () => share(e);
   if ($('#edit')) $('#edit').onclick = () => openEditor(S.customs.find(c => c.id === e.id));
-  if ($('#song')) $('#song').onclick = () => {
-    const b = $('#song');
-    if (songStop) { stopSong(); b.innerHTML = `${I.note}Play ${SONGS[song].name}`; return; }
-    playSong(song, () => { if (b.isConnected) b.innerHTML = `${I.note}Play ${SONGS[song].name}`; });
-    b.innerHTML = `${I.stop}Stop`;
+  // Pausing here only stops this holiday; the next one plays again. Settings has the always-off switch.
+  $('#mus').onclick = () => {
+    if (!player.paused) { player.pause(); return; }
+    mus.blocked = false;
+    if (mus.id === e.id) player.play().catch(() => {}); else musicFor(e, true);
   };
+  $('#nxt').onclick = nextTrack;
+  musicFor(e); musicButton();
   if (party) {
     const boom = () => scene.burst(Math.random() * innerWidth, Math.random() * innerHeight * 0.5, 45);
     setTimeout(boom, 300); setTimeout(boom, 800);
@@ -369,10 +382,14 @@ function openSettings() {
   sheet(`<h2>Settings</h2>
     <label class="f">Count in</label><div class="seg" id="wd"><button data-w="days" class="${S.word === 'days' ? 'on' : ''}">Days</button><button data-w="sleeps" class="${S.word === 'sleeps' ? 'on' : ''}">Sleeps</button></div>
     <label class="f">Cards</label><div class="seg" id="lk"><button data-l="auto" class="${S.look === 'auto' ? 'on' : ''}">Match phone</button><button data-l="light" class="${S.look === 'light' ? 'on' : ''}">Light</button><button data-l="dark" class="${S.look === 'dark' ? 'on' : ''}">Dark</button></div>
-    <div class="sw"><div class="tx">Sounds and songs</div><button class="tog${S.sound ? ' on' : ''}" id="snd" aria-label="Sounds"></button></div>
+    <div class="sw"><div class="tx">Holiday music<small>Plays that holiday's songs while you look at it.</small></div><button class="tog${S.music ? ' on' : ''}" id="msc" aria-label="Holiday music"></button></div>
+    <div class="sw"><div class="tx">Tap sounds</div><button class="tog${S.sound ? ' on' : ''}" id="snd" aria-label="Tap sounds"></button></div>
     <div class="sw"><div class="tx">Days left on the app icon<small>${canBadge ? 'Puts the number of days until your big day on the Big Day icon.' : 'Works once Big Day is on your Home Screen (see below).'}</small></div><button class="tog${S.badge ? ' on' : ''}" id="bdg" aria-label="Days on icon"></button></div>
     <div class="note"><b>Put Big Day on your iPhone:</b> open this page in Safari, tap the Share button, then <b>Add to Home Screen</b>. It works with no signal too.</div>
     ${lists}
+    <div class="grp">Music credits</div>
+    <div class="note">Real recordings from Wikimedia Commons. Most are by United States military bands, which makes them public domain (free for everyone).</div>
+    ${Object.values(TRACKS).map(t => `<div class="sw"><div class="tx">${esc(t.t)}<small>${esc(t.by)} · <a href="${esc(t.page)}" target="_blank" rel="noopener">${esc(t.lic)}</a></small></div></div>`).join('')}
     <div class="note">Dates follow the United States calendar. Easter, Lent and the days around them follow the Western church calendar used by most American churches. Bible verses are from the King James Version.</div>
     <button class="btn ghost" id="done">Done</button>`, (el, close) => {
     el.addEventListener('click', async ev => {
@@ -380,6 +397,7 @@ function openSettings() {
       if (h) { const id = h.dataset.h; S.hidden = S.hidden.includes(id) ? S.hidden.filter(x => x !== id) : [...S.hidden, id]; h.classList.toggle('on'); save(); }
       if (w) { S.word = w.dataset.w; el.querySelectorAll('[data-w]').forEach(b => b.classList.toggle('on', b === w)); save(); }
       if (l) { S.look = l.dataset.l; el.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('on', b === l)); save(); applyLook(); }
+      if (ev.target.closest('#msc')) { S.music = !S.music; ev.target.closest('#msc').classList.toggle('on', S.music); save(); }
       if (ev.target.closest('#snd')) { S.sound = !S.sound; ev.target.closest('#snd').classList.toggle('on', S.sound); save(); if (S.sound) pop(); }
       if (ev.target.closest('#bdg')) {
         const b = ev.target.closest('#bdg');

@@ -196,6 +196,15 @@ const THEMES = {
   halloween: { name: 'Spooky', bg: ['#4b1670', '#120a24'], accent: '#ff8a1f', fx: ['bats', 'stars'] },
   party: { name: 'Party', bg: ['#9b5cff', '#ec4899'], accent: '#ffffff', fx: ['balloons', 'confetti'] },
   summer: { name: 'Summer', bg: ['#ffc72c', '#ff6a1a'], accent: '#ffffff', fx: ['bubbles', 'rays'] },
+  magenta: { name: 'Magenta', bg: ['#ff2bd6', '#a1007a'], accent: '#ffffff', fx: ['confetti', 'stars'] },
+  maroon: { name: 'Maroon', bg: ['#9e1b32', '#4a0614'], accent: '#ffd34d', fx: ['stars'] },
+  lime: { name: 'Lime', bg: ['#8fdc1a', '#3f7a0a'], accent: '#ffffff', fx: ['bubbles', 'confetti'] },
+  coral: { name: 'Coral', bg: ['#ff7a6b', '#e0335a'], accent: '#ffffff', fx: ['petals'] },
+  yellow: { name: 'Yellow', bg: ['#ffe234', '#f5b301'], accent: '#ffffff', fx: ['bubbles', 'confetti'] },
+  gold: { name: 'Gold', bg: ['#ffcc33', '#c7861a'], accent: '#ffffff', fx: ['coins', 'stars'] },
+  navy: { name: 'Navy', bg: ['#2b3f8f', '#0a1233'], accent: '#ffd34d', fx: ['stars'] },
+  turquoise: { name: 'Turquoise', bg: ['#22e0d0', '#0e8a9e'], accent: '#ffffff', fx: ['bubbles'] },
+  bubblegum: { name: 'Bubblegum', bg: ['#ffa8d9', '#ff5fae'], accent: '#ffffff', fx: ['hearts', 'bubbles'] },
 };
 
 // ---- Moving scenes -------------------------------------------------------------------
