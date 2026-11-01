@@ -308,8 +308,9 @@ function startTick(detailId) {
   }, 1000);
 }
 
-// Shown at the bottom of Settings, so you can tell which copy a phone is running. Bump with sw.js SHELL.
-const VERSION = 6;
+// Shown at the bottom of Settings, so you can tell which copy a phone is running.
+// Each release bumps it together with version.json, SHELL in sw.js and the ?v= on the scripts in index.html.
+const VERSION = 7;
 
 // ---- sheets ----
 // While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).
@@ -442,8 +443,10 @@ function openSettings() {
     ${Object.values(TRACKS).map(t => `<div class="sw"><div class="tx">${esc(t.t)}<small>${esc(t.by)} · <a href="${esc(t.page)}" target="_blank" rel="noopener">${esc(t.lic)}</a></small></div></div>`).join('')}
     <div class="note">Dates follow the United States calendar. Easter, Lent and the days around them follow the Western church calendar used by most American churches. Bible verses are from the King James Version.</div>
     <div class="note" style="text-align:center">Big Day version ${VERSION}</div>
+    <button class="btn ghost" id="upd">Check for updates</button>
     <button class="btn ghost" id="done">Done</button>`, (el, close) => {
     el.addEventListener('click', async ev => {
+      if (ev.target.closest('#upd')) checkUpdate(true);
       const h = ev.target.closest('[data-h]'), w = ev.target.closest('[data-w]'), l = ev.target.closest('[data-l]');
       if (h) { const id = h.dataset.h; S.hidden = S.hidden.includes(id) ? S.hidden.filter(x => x !== id) : [...S.hidden, id]; h.classList.toggle('on'); save(); }
       if (w) { S.word = w.dataset.w; el.querySelectorAll('[data-w]').forEach(b => b.classList.toggle('on', b === w)); save(); }
@@ -489,11 +492,33 @@ function updateBadge() {
   document.title = f.today ? `${f.name} is today! · Big Day` : `${n} ${word(n)} until ${f.name} · Big Day`;
 }
 
+// ---- updates ----
+// iPhones are lazy about refreshing a Home Screen app, so Big Day checks for itself: version.json on the
+// site holds the newest version number. If it is newer than this copy, reload to get it. One try per
+// version per minute, so a half-published update can't cause a reload loop.
+async function checkUpdate(manual) {
+  let latest;
+  try {
+    const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+    latest = (await r.json()).version;
+  } catch { if (manual) toast('Can\'t check right now. Are you online?'); return; }
+  if (!(latest > VERSION)) { if (manual) toast(`You have the newest Big Day (version ${VERSION})`); return; }
+  let tried = null;
+  try { tried = JSON.parse(localStorage.getItem('bigday.update')); } catch {}
+  if (tried && tried.v === latest && Date.now() - tried.t < 60000) { if (manual) toast('The update is still on its way. Try again in a minute.'); return; }
+  try { localStorage.setItem('bigday.update', JSON.stringify({ v: latest, t: Date.now() })); } catch {}
+  toast(`Updating Big Day to version ${latest}...`);
+  try { for (const k of await caches.keys()) if (k.startsWith('bigday-shell')) await caches.delete(k); } catch {}
+  try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch {}
+  setTimeout(() => location.reload(), 900);
+}
+
 // ---- start ----
 applyLook();
 addEventListener('hashchange', route);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBadge(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { updateBadge(); checkUpdate(false); } });
 route();
 updateBadge();
 document.fonts && document.fonts.ready.then(updateBadge);
+checkUpdate(false);
 })();
