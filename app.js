@@ -232,7 +232,14 @@ function showHome() {
   startTick();
 }
 
+// Fun ways to count: Earth circles the Sun at about 66,600 miles an hour (29.8 km a second).
+const EARTH_MPMS = 66600 / 36e5;
+// Weeks with one decimal while small ("7.7"), whole numbers after that.
+const weeks = d => d / 7 >= 10 ? num(Math.round(d / 7)) : String(Math.round(d / 7 * 10) / 10);
+
 function showDetail(e) {
+  // "Make it my big day" redraws this page without going through route(), so stop the old confetti here too.
+  clearInterval(autoBurst);
   applyTheme(e.theme);
   const party = celebrating(e), p = parts(e), feat = S.featured === e.id;
   const prog = Math.max(0, Math.min(1, (Date.now() - e.prev) / (e.target - e.prev)));
@@ -244,9 +251,13 @@ function showDetail(e) {
       : clockHTML(p, 'flip') + `<div class="hint">${e.today ? 'Today! Almost time...' : `${num(e.days)} ${e.days === 1 ? 'sleep' : 'sleeps'} to go!`} Tap the picture for a surprise.</div>`;
   const fun = e.past || party ? '' : `<div class="card"><h3>Fun ways to count</h3><div class="fun">
       <div><b>${num(e.days)}</b><span>${e.days === 1 ? 'sleep' : 'sleeps'}</span></div>
+      <div><b>${weeks(e.days)}</b><span>${e.days === 7 ? 'week' : 'weeks'}</span></div>
       <div><b>${num(weekends)}</b><span>${weekends === 1 ? 'weekend' : 'weekends'}</span></div>
+      <div><b>${num(e.days * 3)}</b><span>meals (about)</span></div>
       <div><b data-k="hrs">${num(Math.floor(p.ms / 36e5))}</b><span>hours</span></div>
-      <div><b data-k="beats">${num(Math.round(p.ms / 6e4 * 80))}</b><span>heartbeats (about)</span></div></div>
+      <div><b data-k="mins">${num(Math.floor(p.ms / 6e4))}</b><span>minutes</span></div>
+      <div><b data-k="beats">${num(Math.round(p.ms / 6e4 * 80))}</b><span>heartbeats (about)</span></div>
+      <div><b data-k="miles">${num(Math.round(p.ms * EARTH_MPMS))}</b><span>miles Earth zooms around the Sun</span></div></div>
       <h3 style="margin-top:14px">The wait is ${Math.round(prog * 100)}% over</h3><div class="prog"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
       <div class="small">Counting from ${e.custom && !e.yearly ? 'the day you made it' : 'last time'}: ${fmtShort(e.prev)}</div></div>`;
   $('#app').innerHTML = `
@@ -286,7 +297,8 @@ function showDetail(e) {
   if ($('#nxt')) $('#nxt').onclick = nextTrack;
   musicFor(e); musicButton();
   if (party) {
-    const boom = () => scene.burst(Math.random() * innerWidth, Math.random() * innerHeight * 0.5, 45);
+    // Bound to this page's scene, so a timer that outlives the page can't throw confetti on the next one.
+    const sc = scene, boom = () => sc.burst(Math.random() * innerWidth, Math.random() * innerHeight * 0.5, 45);
     setTimeout(boom, 300); setTimeout(boom, 800);
     if (e.tone === 'party') autoBurst = setInterval(boom, 1600);
   }
@@ -305,12 +317,14 @@ function startTick(detailId) {
     set('d', num(p.d)); set('h', String(p.h).padStart(2, '0')); set('m', String(p.m).padStart(2, '0')); set('s', String(p.s).padStart(2, '0'));
     const hrs = document.querySelector('[data-k="hrs"]'); if (hrs) hrs.textContent = num(Math.floor(p.ms / 36e5));
     const beats = document.querySelector('[data-k="beats"]'); if (beats) beats.textContent = num(Math.round(p.ms / 6e4 * 80));
+    const mins = document.querySelector('[data-k="mins"]'); if (mins) mins.textContent = num(Math.floor(p.ms / 6e4));
+    const miles = document.querySelector('[data-k="miles"]'); if (miles) miles.textContent = num(Math.round(p.ms * EARTH_MPMS));
   }, 1000);
 }
 
 // Shown at the bottom of Settings, so you can tell which copy a phone is running.
 // Each release bumps it together with version.json, SHELL in sw.js and the ?v= on the scripts in index.html.
-const VERSION = 7;
+const VERSION = 8;
 
 // ---- sheets ----
 // While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).

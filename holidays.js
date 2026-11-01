@@ -572,6 +572,22 @@ const TEMPLATES = [
   { name: 'New Baby', icon: 'baby', theme: 'spring', yearly: false },
   { name: 'Big Game', icon: 'ball', theme: 'sky', yearly: false },
   { name: 'Anniversary', icon: 'heart', theme: 'love', yearly: true },
+  { name: 'Graduation', icon: 'gradcap', theme: 'navy', yearly: false },
+  { name: 'Baptism', icon: 'dove', theme: 'sky', yearly: false },
+  { name: 'Camping Trip', icon: 'tent', theme: 'night', yearly: false },
+  { name: 'Fishing Trip', icon: 'fish', theme: 'sea', yearly: false },
+  { name: 'Sleepover', icon: 'moon', theme: 'advent', yearly: false },
+  { name: 'Beach Day', icon: 'sun', theme: 'summer', yearly: false },
+  { name: 'Theme Park', icon: 'coaster', theme: 'party', yearly: false },
+  { name: 'Movie Night', icon: 'popcorn', theme: 'navy', yearly: false },
+  { name: 'Pizza Party', icon: 'pizza', theme: 'maroon', yearly: false },
+  { name: 'Family Reunion', icon: 'friends', theme: 'coral', yearly: false },
+  { name: 'Grandparents Visit', icon: 'glasses', theme: 'autumn', yearly: false },
+  { name: 'New Puppy', icon: 'dog', theme: 'lime', yearly: false },
+  { name: 'Moving Day', icon: 'house', theme: 'turquoise', yearly: false },
+  { name: 'Recital or Play', icon: 'music', theme: 'magenta', yearly: false },
+  { name: 'Championship', icon: 'trophy', theme: 'gold', yearly: false },
+  { name: 'Snow Day Fun', icon: 'beanie', theme: 'winter', yearly: false },
 ];
 
 window.BD_DATA = { HOLIDAYS, TEMPLATES, easter };

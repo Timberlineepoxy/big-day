@@ -508,6 +508,28 @@ const ICONS = {
     <g transform="rotate(12 42 34)"><rect x="28" y="14" width="28" height="38" rx="3.5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
     <text x="33" y="25" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="#1f2937">A</text>
     <path d="M42 26c-6 6-9 9-7 12.5 1.5 2.5 4.5 2.5 6 .5-.2 2.5-1 4-2.5 5h7c-1.5-1-2.3-2.5-2.5-5 1.5 2 4.5 2 6-.5 2-3.5-1-6.5-7-12.5z" fill="#1f2937"/></g>`),
+  // ---- More pictures for home-made countdowns ----
+  tent: svg(`${STAR5(10, 10, 3.5, '#ffffff')}${STAR5(54, 16, 2.8, '#ffffff')}<path d="M3 56h58" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 4v8" stroke="#7a4b26" stroke-width="2.4"/><path d="M32 4h9l-2.5 3 2.5 3h-9z" fill="#e8283c"/>
+    <path d="M32 11L6 55h52z" fill="#ff8a1f"/><path d="M32 11l26 44H32z" fill="#e56b00"/>
+    <path d="M32 26l-10 29h20z" fill="#7a3b10"/><path d="M32 26l-4 29h-6z" fill="#ffb366"/>`),
+  fish: svg(`<g fill="none" stroke="#ffffff" stroke-width="1.6"><circle cx="8" cy="18" r="2.6"/><circle cx="12" cy="10" r="1.8"/><circle cx="6" cy="5" r="1.4"/></g>
+    <path d="M50 32l12-12v24z" fill="#1d4ed8"/><path d="M28 22c2-6 8-8 12-6-2 2-3 5-3 8z" fill="#1d4ed8"/>
+    <path d="M8 32c8-12 22-16 34-10 4 2 7 5 9 10-2 5-5 8-9 10-12 6-26 2-34-10z" fill="#3ba7ff"/>
+    <path d="M12 35c10 8 26 9 36 1-12 3-24 3-36-1z" fill="#93c5fd"/>
+    <path d="M27 28c2 2 2 5 0 7M33 27c2 2 2 6 0 8M39 28c2 2 2 5 0 7" stroke="#93c5fd" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <circle cx="18" cy="29" r="3.4" fill="#ffffff"/><circle cx="17.4" cy="29" r="1.8" fill="#111827"/><path d="M9 33h4" stroke="#1d4ed8" stroke-width="1.6" stroke-linecap="round"/>`),
+  trophy: svg(`<path d="M18 12h-7c0 9 4 13 9 13M46 12h7c0 9-4 13-9 13" stroke="#ffc531" stroke-width="4" fill="none"/>
+    <path d="M18 8h28v14c0 9-6 15-14 15S18 31 18 22z" fill="#ffc531"/><path d="M32 8h14v14c0 9-6 15-14 15z" fill="#f0a91b"/>
+    <path d="M23 12v9" stroke="#fff3b0" stroke-width="3" stroke-linecap="round"/>${STAR5(32, 20, 7, '#fff6c9')}
+    <rect x="29" y="36" width="6" height="8" fill="#f0a91b"/><rect x="20" y="44" width="24" height="5" rx="1.5" fill="#ffc531"/>
+    <rect x="16" y="49" width="32" height="9" rx="2" fill="#7a3b10"/><rect x="25" y="51.5" width="14" height="4" rx="1" fill="#ffd34d"/>`),
+  dove: svg(`${rays(32, 34, 26, 31, 12, '#ffffff66', 2)}
+    <path d="M44 34l16-6-6 10 6 6-16-2z" fill="#e5e9f2"/><ellipse cx="30" cy="37" rx="16" ry="9" fill="#ffffff"/>
+    <path d="M24 33c2-13 13-23 30-25-2 11-9 21-21 27z" fill="#eef2f7"/><path d="M30 30c4-6 10-11 17-14" stroke="#cbd5e1" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <circle cx="16" cy="30" r="6.5" fill="#ffffff"/><path d="M10 29.5l-5.5 2 5.5 1.5z" fill="#ffb21a"/><circle cx="15" cy="29" r="1.4" fill="#1f2937"/>
+    <path d="M7 33c-3 4-3 9 0 13" stroke="#16a34a" stroke-width="1.6" fill="none"/>
+    <g fill="#22a447"><ellipse cx="4" cy="38" rx="2.6" ry="1.3" transform="rotate(-30 4 38)"/><ellipse cx="9" cy="41" rx="2.6" ry="1.3" transform="rotate(30 9 41)"/><ellipse cx="5" cy="45" rx="2.6" ry="1.3" transform="rotate(-20 5 45)"/></g>`),
 };
 
 // Colour schemes. bg = sky gradient, ink = text on it, accent = buttons, fx = moving scene.
@@ -758,6 +780,9 @@ function startScene(canvas, theme, opts = {}) {
 
 // Icons offered when making your own countdown.
 const PICK_ICONS = ['cake', 'rings', 'plane', 'backpack', 'bus', 'baby', 'ball', 'gift', 'heart', 'star', 'sun', 'paw', 'house', 'music',
-  'gradcap', 'tree', 'pumpkin', 'turkey', 'fireworks', 'partyhat', 'flag', 'ship', 'tulip', 'crown', 'shamrock', 'rocket', 'glasses', 'tie'];
+  'gradcap', 'tree', 'pumpkin', 'turkey', 'fireworks', 'partyhat', 'flag', 'ship', 'tulip', 'crown', 'shamrock', 'rocket', 'glasses', 'tie',
+  'trophy', 'tent', 'fish', 'dove', 'cross', 'dog', 'cat', 'squirrel', 'polarbear', 'coaster', 'popcorn', 'pizza', 'donut', 'icecream',
+  'cupcake', 'cookie', 'burger', 'taco', 'friends', 'hug', 'moon', 'planet', 'earth', 'mountain', 'oak', 'book', 'apple', 'bulb',
+  'puzzle', 'beanie', 'sunglasses', 'phone', 'bell', 'stocking', 'candycane', 'sweater', 'tooth', 'flame'];
 
 window.BD_ART = { ICONS, THEMES, startScene, PICK_ICONS };

@@ -153,10 +153,11 @@ svg{display:block}
 .sheet h2{font-family:var(--display);font-weight:700;font-size:26px;margin:4px 0 12px}
 .sheet label.f{display:block;font-weight:900;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 .sheet input[type=text],.sheet input[type=date],.sheet input[type=time],.sheet input[type=number]{width:100%;padding:13px 14px;border-radius:16px;border:2px solid var(--line);background:var(--chip);color:var(--ink);font-weight:800;font-size:17px;min-height:50px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.temps{display:flex;gap:8px;overflow-x:auto;margin:0 -18px;padding:2px 18px 4px;scrollbar-width:none}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.two input{min-width:0}
+.temps{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:84px;gap:8px;overflow-x:auto;margin:0 -18px;padding:2px 18px 4px;scrollbar-width:none}
 .temps::-webkit-scrollbar{display:none}
-.temp{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;padding:8px 4px;border-radius:18px;background:var(--chip);font-weight:800;font-size:12px;line-height:1.15;text-align:center}
+.temp{display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;padding:8px 4px;border-radius:18px;background:var(--chip);font-weight:800;font-size:12px;line-height:1.15;text-align:center}
 .temp svg{width:40px;height:40px}
 .icons{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .icons button{aspect-ratio:1;border-radius:14px;background:var(--chip);display:grid;place-items:center;border:3px solid transparent}
@@ -189,10 +190,10 @@ svg{display:block}
 <body>
 <canvas id="fx"></canvas>
 <main id="app"></main>
-<script src="holidays.js?v=7"></script>
-<script src="art.js?v=7"></script>
-<script src="music.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="holidays.js?v=8"></script>
+<script src="art.js?v=8"></script>
+<script src="music.js?v=8"></script>
+<script src="app.js?v=8"></script>
 <script>
 // Check for a newer Big Day every time it is opened or brought back, and switch to it straight away.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
