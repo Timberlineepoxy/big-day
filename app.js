@@ -152,6 +152,7 @@ const I = {
   pause: '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>',
   next: '<svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7zM18 5v14"/></svg>',
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
 const grad = t => { const th = THEMES[t] || THEMES.party; return `linear-gradient(150deg,${th.bg[0]},${th.bg[1]})`; };
 const icon = id => ICONS[id] || ICONS.star;
@@ -307,11 +308,34 @@ function startTick(detailId) {
 // ---- sheets ----
 function sheet(html, mount) {
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
-  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="x" aria-label="Close">${I.close}</button>${html}</div>`;
   document.body.appendChild(bg);
-  const close = () => bg.remove();
-  bg.addEventListener('click', ev => { if (ev.target === bg) close(); });
-  mount(bg.querySelector('.sheet'), close);
+  const sh = bg.querySelector('.sheet');
+  let gone = false;
+  const close = () => {
+    if (gone) return; gone = true;
+    sh.style.transition = 'transform .22s ease-in'; sh.style.transform = 'translateY(100%)';
+    bg.classList.add('closing'); setTimeout(() => bg.remove(), 220);
+  };
+  bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.x')) close(); });
+  // Slide a finger down to put the sheet away (only when it is scrolled to the top, so scrolling still works).
+  let y0 = null, dy = 0, t0 = 0, drag = false;
+  sh.addEventListener('touchstart', ev => { y0 = sh.scrollTop <= 0 ? ev.touches[0].clientY : null; dy = 0; drag = false; t0 = Date.now(); }, { passive: true });
+  sh.addEventListener('touchmove', ev => {
+    if (y0 === null) return;
+    dy = ev.touches[0].clientY - y0;
+    if (!drag && (dy < 0 || sh.scrollTop > 0)) { y0 = null; return; }
+    if (dy > 6) drag = true;
+    if (drag) { ev.preventDefault(); sh.style.transition = 'none'; sh.style.transform = `translateY(${dy}px)`; }
+  }, { passive: false });
+  sh.addEventListener('touchend', () => {
+    if (!drag) { y0 = null; return; }
+    const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
+    if (dy > 110 || (fast && dy > 30)) close();
+    else { sh.style.transition = 'transform .2s ease-out'; sh.style.transform = ''; }
+    y0 = null; drag = false;
+  });
+  mount(sh, close);
   return close;
 }
 function toast(msg) {
