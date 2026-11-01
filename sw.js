@@ -1,11 +1,12 @@
 // Big Day service worker: lets the app open with no signal.
-const SHELL = 'bigday-shell-v3';
+const SHELL = 'bigday-shell-v4';
 const MEDIA = 'bigday-media-v1';
 const FILES = ['./', 'index.html', 'app.js', 'art.js', 'holidays.js', 'music.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the phone's own web cache, so a new version never saves an old file.
+  e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

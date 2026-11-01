@@ -305,36 +305,59 @@ function startTick(detailId) {
   }, 1000);
 }
 
+// Shown at the bottom of Settings, so you can tell which copy a phone is running. Bump with sw.js SHELL.
+const VERSION = 4;
+
 // ---- sheets ----
+// While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).
+let locks = 0, lockY = 0;
+function lockPage(on) {
+  const b = document.body.style;
+  if (on && locks++ === 0) { lockY = scrollY; Object.assign(b, { position: 'fixed', top: `-${lockY}px`, left: '0', right: '0' }); }
+  if (!on && locks > 0 && --locks === 0) { Object.assign(b, { position: '', top: '', left: '', right: '' }); scrollTo(0, lockY); }
+}
 function sheet(html, mount) {
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
   bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="x" aria-label="Close">${I.close}</button>${html}</div>`;
   document.body.appendChild(bg);
+  lockPage(true);
   const sh = bg.querySelector('.sheet');
   let gone = false;
   const close = () => {
     if (gone) return; gone = true;
     sh.style.transition = 'transform .22s ease-in'; sh.style.transform = 'translateY(100%)';
-    bg.classList.add('closing'); setTimeout(() => bg.remove(), 220);
+    bg.classList.add('closing'); setTimeout(() => { bg.remove(); lockPage(false); }, 220);
   };
   bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.x')) close(); });
-  // Slide a finger down to put the sheet away (only when it is scrolled to the top, so scrolling still works).
-  let y0 = null, dy = 0, t0 = 0, drag = false;
-  sh.addEventListener('touchstart', ev => { y0 = sh.scrollTop <= 0 ? ev.touches[0].clientY : null; dy = 0; drag = false; t0 = Date.now(); }, { passive: true });
+  // Slide a finger down to put the sheet away. iPhones decide on the FIRST finger movement whether
+  // something scrolls, so the decision is made right there: a downward swipe on the grab bar, or
+  // anywhere while the sheet is scrolled to the top, moves the sheet; anything else scrolls it.
+  let y0 = null, dy = 0, t0 = 0, drag = false, decided = false, onBar = false;
+  sh.addEventListener('touchstart', ev => {
+    y0 = ev.touches[0].clientY; dy = 0; drag = false; decided = false; t0 = Date.now();
+    onBar = y0 - sh.getBoundingClientRect().top < 56;
+  }, { passive: true });
   sh.addEventListener('touchmove', ev => {
     if (y0 === null) return;
     dy = ev.touches[0].clientY - y0;
-    if (!drag && (dy < 0 || sh.scrollTop > 0)) { y0 = null; return; }
-    if (dy > 6) drag = true;
-    if (drag) { ev.preventDefault(); sh.style.transition = 'none'; sh.style.transform = `translateY(${dy}px)`; }
+    if (!decided) {
+      if (dy === 0) return; // sideways wobble: wait for the finger to pick a direction
+      decided = true; drag = onBar || (dy > 0 && sh.scrollTop <= 0);
+    }
+    if (!drag) return;
+    ev.preventDefault();
+    sh.style.transition = 'none'; sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
   }, { passive: false });
   sh.addEventListener('touchend', () => {
-    if (!drag) { y0 = null; return; }
-    const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
-    if (dy > 110 || (fast && dy > 30)) close();
-    else { sh.style.transition = 'transform .2s ease-out'; sh.style.transform = ''; }
+    if (drag) {
+      const fast = dy / Math.max(1, Date.now() - t0) > 0.5;
+      if (dy > 110 || (fast && dy > 30)) close();
+      else { sh.style.transition = 'transform .2s ease-out'; sh.style.transform = ''; }
+    }
     y0 = null; drag = false;
   });
+  // The dark area around the sheet never scrolls the page behind it.
+  bg.addEventListener('touchmove', ev => { if (!sh.contains(ev.target)) ev.preventDefault(); }, { passive: false });
   mount(sh, close);
   return close;
 }
@@ -415,6 +438,7 @@ function openSettings() {
     <div class="note">Real recordings from Wikimedia Commons. Most are by United States military bands, which makes them public domain (free for everyone).</div>
     ${Object.values(TRACKS).map(t => `<div class="sw"><div class="tx">${esc(t.t)}<small>${esc(t.by)} · <a href="${esc(t.page)}" target="_blank" rel="noopener">${esc(t.lic)}</a></small></div></div>`).join('')}
     <div class="note">Dates follow the United States calendar. Easter, Lent and the days around them follow the Western church calendar used by most American churches. Bible verses are from the King James Version.</div>
+    <div class="note" style="text-align:center">Big Day version ${VERSION}</div>
     <button class="btn ghost" id="done">Done</button>`, (el, close) => {
     el.addEventListener('click', async ev => {
       const h = ev.target.closest('[data-h]'), w = ev.target.closest('[data-w]'), l = ev.target.closest('[data-l]');

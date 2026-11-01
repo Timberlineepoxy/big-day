@@ -189,12 +189,20 @@ svg{display:block}
 <body>
 <canvas id="fx"></canvas>
 <main id="app"></main>
-<script src="holidays.js"></script>
-<script src="art.js"></script>
-<script src="music.js"></script>
-<script src="app.js"></script>
+<script src="holidays.js?v=4"></script>
+<script src="art.js?v=4"></script>
+<script src="music.js?v=4"></script>
+<script src="app.js?v=4"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+// Check for a newer Big Day every time it is opened or brought back, and switch to it straight away.
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+  });
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+}
 </script>
 </body>
 </html>
