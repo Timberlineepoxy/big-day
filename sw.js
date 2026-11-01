@@ -1,5 +1,5 @@
 // Big Day service worker: lets the app open with no signal.
-const SHELL = 'bigday-shell-v4';
+const SHELL = 'bigday-shell-v6';
 const MEDIA = 'bigday-media-v1';
 const FILES = ['./', 'index.html', 'app.js', 'art.js', 'holidays.js', 'music.js', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];

@@ -31,9 +31,11 @@ function eventFor(src, custom) {
   const t0 = today0();
   let next, prev, past = false, at = null;
   if (!custom) {
-    next = src.date(t0.getFullYear());
-    if (next < t0) next = src.date(t0.getFullYear() + 1);
-    prev = src.date(next.getFullYear() - 1);
+    // Most come every year; elections every 2 or 4 (src.every), in years where year % every === src.from.
+    const step = src.every || 1, fit = y => y + (((src.from || 0) - y) % step + step) % step;
+    next = src.date(fit(t0.getFullYear()));
+    if (next < t0) next = src.date(fit(t0.getFullYear() + 1));
+    prev = src.date(next.getFullYear() - step);
   } else {
     const [y, m, d] = src.date.split('-').map(Number);
     if (src.yearly) {
@@ -113,6 +115,7 @@ const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { cons
 const nowTrack = () => TRACKS[mus.list[mus.i]];
 // Start this holiday's playlist, unless it is already the one playing.
 function musicFor(e, anyway) {
+  if (e && e.music === false) { stopMusic(); return; }
   if (!e || (!S.music && !anyway)) return;
   if (mus.id === e.id && !player.paused) return;
   if (mus.id !== e.id) { const [first, ...rest] = playlistFor(e); mus = { id: e.id, list: [first, ...shuffle(rest)], i: 0, blocked: false }; playTrack(); }
@@ -189,7 +192,7 @@ function showHome() {
   const evs = allEvents();
   const filt = S.filter;
   const shown = filt === 'all' ? evs : evs.filter(e => e.tags.includes(filt));
-  const chips = [['all', 'All'], ['christian', 'Christian'], ['american', 'American'], ['family', 'Family Fun'], ['mine', 'My Countdowns']];
+  const chips = [['all', 'All'], ['christian', 'Christian'], ['american', 'American'], ['family', 'Family Fun'], ['fun', 'Fun Days'], ['vote', 'Voting'], ['mine', 'My Countdowns']];
   let lastMonth = '';
   const rows = shown.map(e => {
     const mo = e.past ? 'Already happened' : e.next.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -257,8 +260,8 @@ function showDetail(e) {
         <button class="pill gold${feat ? ' on' : ''}" id="feat">${I.star}${feat ? 'My big day' : 'Make it my big day'}</button>
         ${e.custom ? `<button class="pill" id="edit">${I.pencil}Change</button>` : ''}
       </div>
-      <div class="acts music"><button class="pill" id="mus"></button><button class="pill" id="nxt" aria-label="Next song" hidden>${I.next}</button></div>
-      <div class="by" id="by"></div>
+      ${e.music === false ? '' : `<div class="acts music"><button class="pill" id="mus"></button><button class="pill" id="nxt" aria-label="Next song" hidden>${I.next}</button></div>
+      <div class="by" id="by"></div>`}
       <div class="cards">
         ${fun}
         ${e.about ? `<div class="card"><h3>What is ${esc(e.name)}?</h3><p>${esc(e.about)}</p></div>` : ''}
@@ -275,12 +278,12 @@ function showDetail(e) {
   $('#share').onclick = () => share(e);
   if ($('#edit')) $('#edit').onclick = () => openEditor(S.customs.find(c => c.id === e.id));
   // Pausing here only stops this holiday; the next one plays again. Settings has the always-off switch.
-  $('#mus').onclick = () => {
+  if ($('#mus')) $('#mus').onclick = () => {
     if (!player.paused) { player.pause(); return; }
     mus.blocked = false;
     if (mus.id === e.id) player.play().catch(() => {}); else musicFor(e, true);
   };
-  $('#nxt').onclick = nextTrack;
+  if ($('#nxt')) $('#nxt').onclick = nextTrack;
   musicFor(e); musicButton();
   if (party) {
     const boom = () => scene.burst(Math.random() * innerWidth, Math.random() * innerHeight * 0.5, 45);
@@ -306,7 +309,7 @@ function startTick(detailId) {
 }
 
 // Shown at the bottom of Settings, so you can tell which copy a phone is running. Bump with sw.js SHELL.
-const VERSION = 4;
+const VERSION = 6;
 
 // ---- sheets ----
 // While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).
@@ -419,7 +422,7 @@ function openEditor(existing) {
 }
 
 function openSettings() {
-  const groups = [['christian', 'Christian holidays'], ['american', 'American holidays'], ['family', 'Family fun days']];
+  const groups = [['christian', 'Christian holidays'], ['american', 'American holidays'], ['family', 'Family fun days'], ['fun', 'Fun days'], ['vote', 'Voting days']];
   const lists = groups.map(([tag, title]) => {
     const hs = HOLIDAYS.filter(h => h.tags[0] === tag).map(h => eventFor(h, false)).sort((a, b) => a.next - b.next);
     return `<div class="grp">${title}</div>${hs.map(h => `<div class="sw"><div class="ic">${icon(h.icon)}</div><div class="tx">${esc(h.name)}<small>${fmtShort(h.next)}</small></div>
