@@ -1,6 +1,6 @@
 // Big Day: screens, countdown maths, sounds and saving.
 (() => {
-const { HOLIDAYS, TEMPLATES } = window.BD_DATA;
+const { HOLIDAYS, TEMPLATES, TEMPLATE_CATS } = window.BD_DATA;
 const { ICONS, THEMES, startScene, PICK_ICONS } = window.BD_ART;
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -324,7 +324,7 @@ function startTick(detailId) {
 
 // Shown at the bottom of Settings, so you can tell which copy a phone is running.
 // Each release bumps it together with version.json, SHELL in sw.js and the ?v= on the scripts in index.html.
-const VERSION = 8;
+const VERSION = 9;
 
 // ---- sheets ----
 // While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).
@@ -385,11 +385,16 @@ function toast(msg) {
   setTimeout(() => t.remove(), 2400);
 }
 
+// Quick start buttons for one category.
+const temps = cat => TEMPLATES.map((t, i) => t.cat === cat ? `<button class="temp" data-t="${i}">${icon(t.icon)}${esc(t.name)}</button>` : '').join('');
+
 function openEditor(existing) {
   const isNew = !existing;
   const d = existing ? { ...existing } : { name: '', date: '', time: '', icon: 'cake', theme: 'party', yearly: false, birthday: false, birthYear: '' };
   sheet(`<h2>${isNew ? 'Make a countdown' : 'Change countdown'}</h2>
-    ${isNew ? `<label class="f">Quick start</label><div class="temps">${TEMPLATES.map((t, i) => `<button class="temp" data-t="${i}">${icon(t.icon)}${esc(t.name)}</button>`).join('')}</div>` : ''}
+    ${isNew ? `<label class="f">Quick start</label>
+      <div class="tcats">${TEMPLATE_CATS.map(([k, l], i) => `<button data-c="${k}" class="${i ? '' : 'on'}">${l}</button>`).join('')}</div>
+      <div class="temps" id="tps">${temps(TEMPLATE_CATS[0][0])}</div>` : ''}
     <label class="f" for="nm">What are we counting down to?</label><input type="text" id="nm" maxlength="40" placeholder="Grandma's visit" value="${esc(d.name)}">
     <div class="two"><div><label class="f" for="dt">Date</label><input type="date" id="dt" value="${esc(d.date)}"></div>
       <div><label class="f" for="tm">Time (if you want)</label><input type="time" id="tm" value="${esc(d.time || '')}"></div></div>
@@ -404,7 +409,8 @@ function openEditor(existing) {
     const q = s => el.querySelector(s);
     const mark = (sel, attr, val) => el.querySelectorAll(sel).forEach(b => b.classList.toggle('on', b.dataset[attr] === val));
     el.addEventListener('click', ev => {
-      const t = ev.target.closest('[data-t]'), ic = ev.target.closest('[data-i]'), th = ev.target.closest('[data-th]');
+      const t = ev.target.closest('[data-t]'), ic = ev.target.closest('[data-i]'), th = ev.target.closest('[data-th]'), c = ev.target.closest('[data-c]');
+      if (c) { mark('[data-c]', 'c', c.dataset.c); q('#tps').innerHTML = temps(c.dataset.c); q('#tps').scrollLeft = 0; pop(); }
       if (t) {
         const tp = TEMPLATES[t.dataset.t]; Object.assign(d, { icon: tp.icon, theme: tp.theme, yearly: tp.yearly, birthday: !!tp.birthday });
         q('#nm').value = tp.name; mark('[data-i]', 'i', d.icon); mark('[data-th]', 'th', d.theme);

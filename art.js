@@ -52,6 +52,19 @@ const fibo = () => {
     + `<path d="${path}" stroke="#1f2937" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
 };
 
+// A soccer-ball patch: a dark pentagon of radius r, turned by rot.
+const pent = (cx, cy, r, rot) => {
+  let p = '';
+  for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + rot + i * 2 * Math.PI / 5; p += `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)} `; }
+  return `<polygon points="${p}" fill="#1f2937"/>`;
+};
+// A black-and-white checkered race flag, 4 squares by 3.
+const checker = (x, y, w, h) => {
+  const cw = w / 4, ch = h / 3; let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff"/>`;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) if ((r + c) % 2 === 0) s += `<rect x="${(x + c * cw).toFixed(1)}" y="${(y + r * ch).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="#111827"/>`;
+  return s + `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#111827" stroke-width="1"/>`;
+};
+
 const ICONS = {
   tree: svg(`<rect x="28" y="50" width="8" height="10" rx="2" fill="#8b5a2b"/>
     <path d="M32 9L45 25H39L50 38H42L54 52H10L22 38H14L25 25H19Z" fill="#22a447"/>
@@ -530,6 +543,59 @@ const ICONS = {
     <circle cx="16" cy="30" r="6.5" fill="#ffffff"/><path d="M10 29.5l-5.5 2 5.5 1.5z" fill="#ffb21a"/><circle cx="15" cy="29" r="1.4" fill="#1f2937"/>
     <path d="M7 33c-3 4-3 9 0 13" stroke="#16a34a" stroke-width="1.6" fill="none"/>
     <g fill="#22a447"><ellipse cx="4" cy="38" rx="2.6" ry="1.3" transform="rotate(-30 4 38)"/><ellipse cx="9" cy="41" rx="2.6" ry="1.3" transform="rotate(30 9 41)"/><ellipse cx="5" cy="45" rx="2.6" ry="1.3" transform="rotate(-20 5 45)"/></g>`),
+  // ---- Sports and everyday pictures for home-made countdowns ----
+  football: svg(`<g transform="rotate(-35 32 32)"><path d="M5 32C13 15 51 15 59 32 51 49 13 49 5 32z" fill="#8b4513"/>
+    <path d="M32 18c12 0 22 5 27 14-9-6-18-8-27-8z" fill="#00000022"/>
+    <path d="M15 23c-2 6-2 12 0 18M49 23c2 6 2 12 0 18" stroke="#ffffff" stroke-width="2.6" fill="none"/>
+    <path d="M22 32h20" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/><path d="M25 29v6M29 29v6M33 29v6M37 29v6M41 29v6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="22" cy="24" rx="5" ry="1.8" fill="#b5651d"/></g>`),
+  baseball: svg(`<circle cx="32" cy="32" r="25" fill="#ffffff"/><path d="M32 7a25 25 0 0 1 0 50c9-6 14-15 14-25S41 13 32 7z" fill="#00000012"/>
+    <path d="M18 12c8 10 8 30 0 40M46 12c-8 10-8 30 0 40" stroke="#e8283c" stroke-width="1.6" fill="none"/>
+    <path d="M18 12c8 10 8 30 0 40M46 12c-8 10-8 30 0 40" stroke="#e8283c" stroke-width="6" fill="none" stroke-dasharray="1.4 3.2"/>`),
+  soccer: svg(`<circle cx="32" cy="32" r="25" fill="#ffffff"/><path d="M32 7a25 25 0 0 1 0 50c9-6 14-15 14-25S41 13 32 7z" fill="#00000010"/>
+    ${pent(32, 32, 8, 0)}${[0, 1, 2, 3, 4].map(i => { const a = -Math.PI / 2 + i * 2 * Math.PI / 5; return pent(32 + 19.5 * Math.cos(a), 32 + 19.5 * Math.sin(a), 5, Math.PI); }).join('')}
+    <path d="M32 24v-6.5M39.6 29.5l6.2-2M36.7 38.5l3.8 5.3M27.3 38.5l-3.8 5.3M24.4 29.5l-6.2-2" stroke="#1f2937" stroke-width="1.8"/>
+    <circle cx="32" cy="32" r="25" fill="none" stroke="#1f2937" stroke-width="1.6"/>`),
+  hockey: svg(`<path d="M46 4L27 46c-1.5 3-3.5 5-7 5H8c-3 0-4 5 0 6h14c5 0 9-2 11-7L51 7z" fill="#c98a3a"/>
+    <path d="M9 51.5h12" stroke="#1f2937" stroke-width="5"/><path d="M45 7l5 2" stroke="#1f2937" stroke-width="4"/>
+    <ellipse cx="46" cy="53" rx="11" ry="4.5" fill="#111827"/><rect x="35" y="48.5" width="22" height="4.5" fill="#111827"/><ellipse cx="46" cy="48.5" rx="11" ry="4.5" fill="#374151"/>`),
+  golf: svg(`<ellipse cx="32" cy="52" rx="29" ry="9" fill="#22a447"/><ellipse cx="32" cy="50" rx="24" ry="6" fill="#2fbf5b"/>
+    <ellipse cx="36" cy="50" rx="5" ry="2" fill="#14532d"/><path d="M36 50V7" stroke="#e5e7eb" stroke-width="2.2"/><path d="M36 7l17 6-17 6z" fill="#e8283c"/>
+    <circle cx="18" cy="47" r="5" fill="#ffffff"/><g fill="#cbd5e1"><circle cx="16.5" cy="45.5" r=".8"/><circle cx="19.5" cy="46" r=".8"/><circle cx="18" cy="48.5" r=".8"/></g>`),
+  deer: svg(`<path d="M23 20C16 14 14 8 16 2M18 12l-7-2M17 7l-5-4M41 20c7-6 9-12 7-18M46 12l7-2M47 7l5-4" stroke="#c9a66b" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="14" cy="27" rx="9" ry="4.5" transform="rotate(-25 14 27)" fill="#a0632e"/><ellipse cx="50" cy="27" rx="9" ry="4.5" transform="rotate(25 50 27)" fill="#a0632e"/>
+    <ellipse cx="14" cy="27" rx="5.5" ry="2.4" transform="rotate(-25 14 27)" fill="#e9c79a"/><ellipse cx="50" cy="27" rx="5.5" ry="2.4" transform="rotate(25 50 27)" fill="#e9c79a"/>
+    <path d="M20 22c0-7 24-7 24 0 0 10-4 18-6 26-1.5 6-10.5 6-12 0-2-8-6-16-6-26z" fill="#b5763a"/><path d="M28 18c2-2 6-2 8 0-1 4-7 4-8 0z" fill="#d9a066"/>
+    <ellipse cx="32" cy="46" rx="7" ry="6.5" fill="#e9c79a"/><ellipse cx="32" cy="43.5" rx="3.6" ry="2.6" fill="#1f1f1f"/>
+    <circle cx="25.5" cy="30" r="2.6" fill="#1f1f1f"/><circle cx="38.5" cy="30" r="2.6" fill="#1f1f1f"/><circle cx="26.3" cy="29.2" r=".9" fill="#fff"/><circle cx="39.3" cy="29.2" r=".9" fill="#fff"/>`),
+  raceflag: svg(`<g transform="rotate(-18 20 60)"><path d="M20 60V6" stroke="#9ca3af" stroke-width="2.6" stroke-linecap="round"/>${checker(20, 7, 22, 15)}</g>
+    <g transform="rotate(18 44 60)"><path d="M44 60V6" stroke="#9ca3af" stroke-width="2.6" stroke-linecap="round"/>${checker(22, 7, 22, 15)}</g>`),
+  car: svg(`<path d="M6 43v-8c0-3 2-5 5-5h6l7-10c1-2 3-3 5-3h12c2 0 4 1 5 3l6 10h2c3 0 5 2 5 5v8c0 2-1 3-3 3H9c-2 0-3-1-3-3z" fill="#e8283c"/>
+    <path d="M23 30l5-8c.5-1 1.5-1.5 2.5-1.5H34V30z" fill="#bfe7ff"/><path d="M37 20.5h4c1 0 2 .5 2.5 1.5l5 8H37z" fill="#bfe7ff"/>
+    <path d="M10 36h44" stroke="#ff6b78" stroke-width="2" stroke-linecap="round"/><rect x="55" y="34" width="4" height="3" rx="1" fill="#ffd34d"/>
+    <circle cx="18" cy="46" r="7" fill="#1f2937"/><circle cx="18" cy="46" r="3" fill="#9ca3af"/><circle cx="46" cy="46" r="7" fill="#1f2937"/><circle cx="46" cy="46" r="3" fill="#9ca3af"/>`),
+  gamepad: svg(`<path d="M14 22h36c7 0 11 6 12 14 1 9-2 16-8 16-4 0-6-3-9-7H19c-3 4-5 7-9 7-6 0-9-7-8-16 1-8 5-14 12-14z" fill="#8a3ff0"/>
+    <path d="M32 22h18c7 0 11 6 12 14 1 9-2 16-8 16-4 0-6-3-9-7H32z" fill="#6d28d9"/>
+    <path d="M14 34h11M19.5 28.5v11" stroke="#1f2937" stroke-width="4.4" stroke-linecap="round"/>
+    <circle cx="45" cy="29" r="2.8" fill="#ffd34d"/><circle cx="51" cy="34.5" r="2.8" fill="#2fd38a"/><circle cx="45" cy="40" r="2.8" fill="#3ba7ff"/><circle cx="39" cy="34.5" r="2.8" fill="#ff3b4e"/>`),
+  ferriswheel: svg(`<path d="M32 30L16 59M32 30l16 29" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/><rect x="8" y="57" width="48" height="5" rx="2.5" fill="#16a34a"/>
+    ${rays(32, 30, 0, 22, 8, '#ffd34d', 1.6)}<circle cx="32" cy="30" r="22" fill="none" stroke="#e8283c" stroke-width="3"/>
+    ${['#3ba7ff', '#ff4fa3', '#2fd38a', '#ffd34d', '#8a3ff0', '#ff8a1f', '#22e0d0', '#ff3b4e'].map((c, i) => {
+      const a = i * Math.PI / 4, x = 32 + 22 * Math.cos(a), y = 30 + 22 * Math.sin(a);
+      return `<rect x="${(x - 4).toFixed(1)}" y="${(y + 1).toFixed(1)}" width="8" height="6" rx="2" fill="${c}"/>`;
+    }).join('')}<circle cx="32" cy="30" r="3.5" fill="#ffd34d"/>`),
+  balloons: svg(`<path d="M20 34c2 8-2 14 6 26M44 32c-2 10 2 16-8 28M32 40c0 8 2 12 0 20" stroke="#ffffff" stroke-width="1.4" fill="none"/>
+    <ellipse cx="20" cy="22" rx="10" ry="12" fill="#ff4fa3"/><path d="M18 34l2-2 2 2z" fill="#ff4fa3"/>
+    <ellipse cx="44" cy="20" rx="10" ry="12" fill="#3ba7ff"/><path d="M42 32l2-2 2 2z" fill="#3ba7ff"/>
+    <ellipse cx="32" cy="28" rx="10" ry="12" fill="#ffd34d"/><path d="M30 40l2-2 2 2z" fill="#ffd34d"/>
+    <g fill="#ffffff88"><ellipse cx="16" cy="17" rx="2.4" ry="4" transform="rotate(20 16 17)"/><ellipse cx="40" cy="15" rx="2.4" ry="4" transform="rotate(20 40 15)"/><ellipse cx="28" cy="23" rx="2.4" ry="4" transform="rotate(20 28 23)"/></g>`),
+  camera: svg(`<path d="M22 18l4-6h12l4 6z" fill="#374151"/><rect x="10" y="13" width="8" height="6" rx="1.5" fill="#e8283c"/>
+    <rect x="6" y="18" width="52" height="36" rx="6" fill="#4b5563"/><rect x="6" y="18" width="52" height="8" rx="4" fill="#374151"/>
+    <circle cx="32" cy="37" r="13" fill="#1f2937"/><circle cx="32" cy="37" r="8.5" fill="#3ba7ff"/><circle cx="29" cy="34" r="2.8" fill="#bfe7ff"/>
+    <rect x="46" y="21" width="8" height="4" rx="1.5" fill="#ffd34d"/>`),
+  briefcase: svg(`<path d="M24 18v-5c0-2 1-3 3-3h10c2 0 3 1 3 3v5" stroke="#5a3518" stroke-width="3.6" fill="none"/>
+    <rect x="6" y="18" width="52" height="38" rx="5" fill="#8b5a2b"/><rect x="32" y="18" width="26" height="38" rx="5" fill="#7a4b26"/>
+    <path d="M6 33h52" stroke="#5a3518" stroke-width="3"/><rect x="28" y="29" width="8" height="8" rx="1.5" fill="#ffc531"/>`),
 };
 
 // Colour schemes. bg = sky gradient, ink = text on it, accent = buttons, fx = moving scene.
@@ -783,6 +849,7 @@ const PICK_ICONS = ['cake', 'rings', 'plane', 'backpack', 'bus', 'baby', 'ball',
   'gradcap', 'tree', 'pumpkin', 'turkey', 'fireworks', 'partyhat', 'flag', 'ship', 'tulip', 'crown', 'shamrock', 'rocket', 'glasses', 'tie',
   'trophy', 'tent', 'fish', 'dove', 'cross', 'dog', 'cat', 'squirrel', 'polarbear', 'coaster', 'popcorn', 'pizza', 'donut', 'icecream',
   'cupcake', 'cookie', 'burger', 'taco', 'friends', 'hug', 'moon', 'planet', 'earth', 'mountain', 'oak', 'book', 'apple', 'bulb',
-  'puzzle', 'beanie', 'sunglasses', 'phone', 'bell', 'stocking', 'candycane', 'sweater', 'tooth', 'flame'];
+  'puzzle', 'beanie', 'sunglasses', 'phone', 'bell', 'stocking', 'candycane', 'sweater', 'tooth', 'flame',
+  'football', 'baseball', 'soccer', 'hockey', 'golf', 'deer', 'raceflag', 'car', 'gamepad', 'ferriswheel', 'balloons', 'camera', 'briefcase'];
 
 window.BD_ART = { ICONS, THEMES, startScene, PICK_ICONS };
