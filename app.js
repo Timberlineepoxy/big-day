@@ -8,12 +8,14 @@ const DAY = 864e5;
 
 // ---- saved settings (this phone only) ----
 const KEY = 'bigday.v1';
-const DEFAULTS = { customs: [], featured: 'christmas', hidden: [], badge: false, sound: true, music: true, word: 'days', filter: 'all', look: 'auto' };
+// stickers: { 'YYYY-MM-DD': icon } for each day the surprise door was opened. did: the day's challenge was done.
+const DEFAULTS = { customs: [], featured: 'christmas', hidden: [], badge: false, sound: true, music: true, word: 'days', filter: 'all', look: 'auto', name: '', stickers: {}, did: '' };
 let S = load();
 function load() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { ...DEFAULTS }; }
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+// False when the phone is out of room (a big photo can do that).
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); return true; } catch { return false; } }
 
 // ---- dates ----
 const startOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -25,6 +27,10 @@ const onYear = (m, d, y) => new Date(y, m, m === 1 && d === 29 && !isLeap(y) ? 2
 const fmtDate = d => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 const fmtShort = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const num = n => n.toLocaleString('en-US');
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// The app's own day count, for picking each day's surprise and sticker.
+const dayNo = d => daysBetween(new Date(2026, 0, 1), d);
+const possessive = n => n + (/s$/i.test(n) ? "'" : "'s");
 
 // One shape for holidays and home-made countdowns.
 function eventFor(src, custom) {
@@ -159,6 +165,12 @@ const I = {
 };
 const grad = t => { const th = THEMES[t] || THEMES.party; return `linear-gradient(150deg,${th.bg[0]},${th.bg[1]})`; };
 const icon = id => ICONS[id] || ICONS.star;
+// The small square picture on a row: your photo if the countdown has one, otherwise its drawing.
+const icBox = e => e.photo ? `<div class="ic ph" style="background-image:url('${esc(e.photo)}')"></div>`
+  : `<div class="ic" style="background:${grad(e.theme)}">${icon(e.icon)}</div>`;
+// The big picture on the home screen and a countdown's page.
+const bigArt = (e, id) => e.photo ? `<div class="art ph"${id ? ` id="${id}"` : ''} style="background-image:url('${esc(e.photo)}')"><span class="badge">${icon(e.icon)}</span></div>`
+  : `<div class="art"${id ? ` id="${id}"` : ''}>${icon(e.icon)}</div>`;
 
 let scene = null, timer = 0, autoBurst = 0, shownDay = today0().getTime();
 function applyTheme(themeId) {
@@ -201,7 +213,7 @@ function showHome() {
     const right = e.today ? '<span class="today">TODAY!</span>'
       : e.past ? `<div class="ct"><b>${num(-e.days)}</b><span>${-e.days === 1 ? 'day ago' : 'days ago'}</span></div>`
         : `<div class="ct"><b>${num(e.days)}</b><span>${word(e.days)}</span></div>`;
-    return `${head}<button class="row" data-go="${esc(e.id)}"><div class="ic" style="background:${grad(e.theme)}">${icon(e.icon)}</div>
+    return `${head}<button class="row" data-go="${esc(e.id)}">${icBox(e)}
       <div class="tx"><div class="t">${esc(e.name)}</div><div class="d">${sub}</div></div>
       ${S.featured === e.id ? `<svg class="pin" viewBox="0 0 24 24"><path d="${STAR_D}"/></svg>` : ''}${right}</button>`;
   }).join('');
@@ -213,18 +225,26 @@ function showHome() {
   $('#app').innerHTML = `
     <div class="bar"><div class="logo"><span class="mk">${ICONS.gift}</span>Big Day</div><div class="sp"></div>
       <button class="round" id="set" aria-label="Settings">${I.gear}</button></div>
+    ${todayBanner(evs)}
     <button class="hero" data-go="${esc(f.id)}">
-      <span class="tag">${f.custom ? 'My big day' : 'Big day'}</span>
-      <div class="art">${icon(f.icon)}</div>
+      <span class="tag">${S.name ? esc(possessive(S.name)) + ' big day' : f.custom ? 'My big day' : 'Big day'}</span>
+      ${bigArt(f)}
       <div class="nm">${esc(f.name)}</div>${heroBody}
       <div class="when">${fmtDate(f.next)}</div>
     </button>
+    <div id="doorw">${doorHTML()}</div>
     <div class="chips">${chips.map(([k, l]) => `<button class="chip${filt === k ? ' on' : ''}" data-f="${k}">${l}</button>`).join('')}</div>
     <div class="list">${rows || `<div class="empty">${filt === 'mine' ? 'No countdowns of your own yet. Make one for a birthday, a trip, anything!' : 'Nothing here. Turn some holidays back on in Settings.'}</div>`}</div>
     <button class="make" id="make">${I.plus}Make my own countdown</button>`;
   $('#app').onclick = ev => {
     const go = ev.target.closest('[data-go]'), fb = ev.target.closest('[data-f]');
-    if (go) { pop(); musicFor(findEvent(go.dataset.go)); location.hash = 'day=' + encodeURIComponent(go.dataset.go); }
+    if (ev.target.closest('#door')) openDoor(ev);
+    else if (ev.target.closest('#ans')) { pop(); $('#ans').hidden = true; $('#ansT').hidden = false; }
+    else if (ev.target.closest('#did') && S.did !== dayKey(today0())) {
+      S.did = dayKey(today0()); save(); pop(); scene.burst(ev.clientX, ev.clientY, 50); toast('Way to go!'); $('#doorw').innerHTML = doorHTML();
+    }
+    else if (ev.target.closest('#book')) openStickers();
+    else if (go) { pop(); musicFor(findEvent(go.dataset.go)); location.hash = 'day=' + encodeURIComponent(go.dataset.go); }
     else if (fb) { S.filter = fb.dataset.f; save(); showHome(); }
     else if (ev.target.closest('#make')) openEditor(null);
     else if (ev.target.closest('#set')) openSettings();
@@ -232,10 +252,82 @@ function showHome() {
   startTick();
 }
 
+// "Today is National Sandwich Day!" across the top of the home screen; tomorrow's days when nothing is on today.
+function todayBanner(evs) {
+  let lead = 'Today is', list = evs.filter(e => e.today);
+  if (!list.length) { lead = 'Tomorrow is'; list = evs.filter(e => !e.past && e.days === 1); }
+  if (!list.length) return '';
+  const n = list.map(e => e.name);
+  const txt = n.length === 1 ? n[0] : n.length === 2 ? `${n[0]} and ${n[1]}` : `${n[0]}, ${n[1]} and ${n.length - 2} more`;
+  return `<button class="todaybn" data-go="${esc(list[0].id)}">${icBox(list[0])}<div class="tx"><small>${lead}</small><b>${esc(txt)}!</b></div>${I.back}</button>`;
+}
+
+// ---- the surprise door: one a day, and a sticker for opening it ----
+const { surpriseFor } = window.BD_SURPRISE;
+const DOOR_LABEL = { joke: 'Joke of the day', challenge: 'Today\'s challenge', fact: 'Did you know?', verse: 'Verse of the day' };
+function hello() {
+  const h = new Date().getHours(), part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  return S.name ? `${part}, ${esc(S.name)}!` : `${part}!`;
+}
+// Today's sticker: the picture of a holiday that is on today, otherwise one of the drawings, taking turns.
+function stickerFor(d) {
+  const on = HOLIDAYS.find(h => !S.hidden.includes(h.id) && eventFor(h, false).today);
+  return on ? on.icon : PICK_ICONS[((dayNo(d) * 7) % PICK_ICONS.length + PICK_ICONS.length) % PICK_ICONS.length];
+}
+// Days in a row with a sticker, counting back from today (or from yesterday, if today's door is still shut).
+function streak() {
+  let d = today0(), n = 0;
+  if (!S.stickers[dayKey(d)]) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+  while (S.stickers[dayKey(d)]) { n++; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1); }
+  return n;
+}
+function doorHTML() {
+  const t = today0(), k = dayKey(t);
+  if (!S.stickers[k]) return `<button class="doorc" id="door" aria-label="Open today's surprise door">
+      <div class="door"><div class="dp"><b>${t.getDate()}</b><i></i></div></div>
+      <div class="dtx"><small>${hello()}</small><b>Today's surprise door</b><span>Tap to open it!</span></div></button>`;
+  const s = surpriseFor(dayNo(t)), n = streak();
+  const extra = s.type === 'joke' ? `<button class="mini" id="ans">Show the answer</button><p class="ansT" id="ansT" hidden>${esc(s.answer)}</p>`
+    : s.type === 'verse' ? `<cite>${esc(s.ref)} (King James Version)</cite>`
+      : s.type === 'challenge' ? `<button class="mini${S.did === k ? ' done' : ''}" id="did">${S.did === k ? 'Done! Great job!' : 'I did it!'}</button>` : '';
+  return `<div class="doorc open"><div class="dbody ${s.type}"><h3>${DOOR_LABEL[s.type]}</h3><p>${esc(s.text)}</p>${extra}</div>
+    <div class="stk"><div class="sk">${icon(S.stickers[k])}</div><div class="tx"><b>Today's sticker is yours!</b><span>${n} ${n === 1 ? 'day' : 'days'} in a row</span></div>
+      <button class="mini" id="book">Sticker book</button></div></div>`;
+}
+function openDoor(ev) {
+  const t = today0(), k = dayKey(t), dr = $('#door .door');
+  if (S.stickers[k] || !dr || dr.classList.contains('opening')) return;
+  pop(); dr.classList.add('opening');
+  const r = dr.getBoundingClientRect();
+  setTimeout(() => {
+    S.stickers[k] = stickerFor(t); save();
+    $('#doorw').innerHTML = doorHTML();
+    scene.burst(r.left + r.width / 2, r.top + r.height / 2, 60);
+    toast('You got a new sticker!');
+  }, 550);
+}
+function openStickers() {
+  const keys = Object.keys(S.stickers).sort().reverse();
+  let best = 0, run = 0, prev = null;
+  for (const k of [...keys].reverse()) {
+    const [y, m, d] = k.split('-').map(Number), day = new Date(y, m - 1, d);
+    run = prev && daysBetween(prev, day) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = day;
+  }
+  const n = streak();
+  sheet(`<h2>Sticker book</h2>
+    <div class="note">Open the surprise door every day to get a new sticker. On a holiday, you get that holiday's sticker!</div>
+    <div class="stats"><div><b>${keys.length}</b><span>${keys.length === 1 ? 'sticker' : 'stickers'}</span></div><div><b>${n}</b><span>${n === 1 ? 'day' : 'days'} in a row</span></div><div><b>${best}</b><span>best streak</span></div></div>
+    ${keys.length ? `<div class="book">${keys.map(k => { const [y, m, d] = k.split('-').map(Number);
+      return `<div class="st">${icon(S.stickers[k])}<span>${new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>`; }).join('')}</div>`
+      : '<div class="note">No stickers yet. Open today\'s door!</div>'}
+    <button class="btn ghost" id="done">Done</button>`, (el, close) => { el.querySelector('#done').onclick = close; });
+}
+
 // Fun ways to count: Earth circles the Sun at about 66,600 miles an hour (29.8 km a second).
 const EARTH_MPMS = 66600 / 36e5;
 // Weeks with one decimal while small ("7.7"), whole numbers after that.
 const weeks = d => d / 7 >= 10 ? num(Math.round(d / 7)) : String(Math.round(d / 7 * 10) / 10);
+const CHAIN_MAX = 100, CHAIN_COLORS = ['#ff3b4e', '#ffc531', '#2fd38a', '#3ba7ff', '#8a3ff0', '#ff8a1f', '#ff4fa3'];
 
 function showDetail(e) {
   // "Make it my big day" redraws this page without going through route(), so stop the old confetti here too.
@@ -260,11 +352,16 @@ function showDetail(e) {
       <div><b data-k="miles">${num(Math.round(p.ms * EARTH_MPMS))}</b><span>miles Earth zooms around the Sun</span></div></div>
       <h3 style="margin-top:14px">The wait is ${Math.round(prog * 100)}% over</h3><div class="prog"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
       <div class="small">Counting from ${e.custom && !e.yearly ? 'the day you made it' : 'last time'}: ${fmtShort(e.prev)}</div></div>`;
+  // A paper chain like the ones made at school: one link for every day left, and one comes off each day.
+  const links = Math.min(e.days, CHAIN_MAX);
+  const chain = e.past || party || e.days < 1 ? '' : `<div class="card"><h3>Paper chain</h3>
+      <button class="chain" id="chain" aria-label="Paper chain">${Array.from({ length: links }, (_, i) => `<i style="--c:${CHAIN_COLORS[i % CHAIN_COLORS.length]}"></i>`).join('')}</button>
+      <div class="small">${e.days > CHAIN_MAX ? `Here are the last ${CHAIN_MAX} links of ${num(e.days)}.` : `${num(links)} ${links === 1 ? 'link' : 'links'} left.`} One link comes off every day. Tap the chain to try!</div></div>`;
   $('#app').innerHTML = `
     <div class="bar"><button class="round" id="back" aria-label="Back">${I.back}</button><div class="sp"></div>
       <button class="round" id="share" aria-label="Share">${I.share}</button></div>
     <div class="detail">
-      <button class="tap" id="tap" aria-label="Tap for a surprise"><div class="art" id="art">${icon(e.icon)}</div></button>
+      <button class="tap" id="tap" aria-label="Tap for a surprise">${bigArt(e, 'art')}</button>
       <h1>${esc(e.name)}</h1><div class="when">${fmtDate(e.target)}${e.time ? ' at ' + e.target.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}${e.age && !party ? ` · turning ${e.age}!` : ''}</div>
       ${top}
       <div class="acts">
@@ -275,6 +372,7 @@ function showDetail(e) {
       <div class="by" id="by"></div>`}
       <div class="cards">
         ${fun}
+        ${chain}
         ${e.about ? `<div class="card"><h3>What is ${esc(e.name)}?</h3><p>${esc(e.about)}</p></div>` : ''}
         ${e.verse ? `<div class="card verse"><h3>From the Bible</h3><p>"${esc(e.verse[0])}"</p><cite>${esc(e.verse[1])} (King James Version)</cite></div>` : ''}
         ${e.fact ? `<div class="card"><h3>Did you know?</h3><p>${esc(e.fact)}</p></div>` : ''}
@@ -287,6 +385,12 @@ function showDetail(e) {
   };
   $('#feat').onclick = () => { S.featured = e.id; save(); pop(); updateBadge(); toast(`${e.name} is your big day now!`); showDetail(findEvent(e.id)); };
   $('#share').onclick = () => share(e);
+  // Tapping the chain pulls off the next link; it hangs back on, because that day hasn't come yet.
+  if ($('#chain')) $('#chain').onclick = ev => {
+    const l = $('#chain i:last-child'); if (!l || l.classList.contains('off')) return;
+    pop(); l.classList.add('off'); scene.burst(ev.clientX, ev.clientY, 18);
+    setTimeout(() => l.classList.remove('off'), 1400);
+  };
   if ($('#edit')) $('#edit').onclick = () => openEditor(S.customs.find(c => c.id === e.id));
   // Pausing here only stops this holiday; the next one plays again. Settings has the always-off switch.
   if ($('#mus')) $('#mus').onclick = () => {
@@ -324,7 +428,7 @@ function startTick(detailId) {
 
 // Shown at the bottom of Settings, so you can tell which copy a phone is running.
 // Each release bumps it together with version.json, SHELL in sw.js and the ?v= on the scripts in index.html.
-const VERSION = 9;
+const VERSION = 10;
 
 // ---- sheets ----
 // While a sheet is open the page behind it is pinned in place (the only lock iPhones respect).
@@ -385,6 +489,19 @@ function toast(msg) {
   setTimeout(() => t.remove(), 2400);
 }
 
+// Make a phone photo small enough to keep (800 pixels on the long side, as a JPEG).
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const k = Math.min(1, 800 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.72);
+  } finally { URL.revokeObjectURL(url); }
+}
+const loadImg = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+
 // Quick start buttons for one category.
 const temps = cat => TEMPLATES.map((t, i) => t.cat === cat ? `<button class="temp" data-t="${i}">${icon(t.icon)}${esc(t.name)}</button>` : '').join('');
 
@@ -403,6 +520,10 @@ function openEditor(existing) {
     <div id="byw" ${d.birthday ? '' : 'hidden'}><label class="f" for="by">Year they were born</label><input type="number" id="by" inputmode="numeric" min="1900" max="2100" placeholder="2018" value="${esc(d.birthYear || '')}"></div>
     <label class="f">Picture</label><div class="icons" id="ics">${PICK_ICONS.map(k => `<button data-i="${k}" class="${d.icon === k ? 'on' : ''}" aria-label="${k}">${icon(k)}</button>`).join('')}</div>
     <label class="f">Colors</label><div class="themes" id="ths">${Object.entries(THEMES).map(([k, t]) => `<button data-th="${k}" class="${d.theme === k ? 'on' : ''}" style="background:${grad(k)}" aria-label="${t.name}"></button>`).join('')}</div>
+    <label class="f">Your own photo (if you want)</label>
+    <div class="phrow"><div class="phprev" id="php"></div><div class="phbtns"><button class="mini" id="pha">Add a photo</button><button class="mini" id="phx">Take it off</button></div>
+      <input type="file" id="phf" accept="image/*" hidden></div>
+    <div class="small">The photo stays on this phone only.</div>
     <button class="btn" id="ok">${isNew ? 'Start the countdown!' : 'Save'}</button>
     ${isNew ? '' : '<button class="btn red" id="del">Delete this countdown</button>'}
     <button class="btn ghost" id="cancel">Cancel</button>`, (el, close) => {
@@ -421,6 +542,19 @@ function openEditor(existing) {
     });
     q('#yr').onclick = () => { d.yearly = !d.yearly; q('#yr').classList.toggle('on', d.yearly); };
     q('#bd').onclick = () => { d.birthday = !d.birthday; q('#bd').classList.toggle('on', d.birthday); q('#byw').hidden = !d.birthday; if (d.birthday && !d.yearly) { d.yearly = true; q('#yr').classList.add('on'); } };
+    const showPhoto = () => {
+      q('#php').style.backgroundImage = d.photo ? `url('${d.photo}')` : '';
+      q('#php').innerHTML = d.photo ? '' : icon(d.icon);
+      q('#pha').textContent = d.photo ? 'Pick another' : 'Add a photo'; q('#phx').hidden = !d.photo;
+    };
+    showPhoto();
+    el.addEventListener('click', ev => { if (ev.target.closest('[data-i],[data-t]')) showPhoto(); });
+    q('#pha').onclick = () => q('#phf').click();
+    q('#phx').onclick = () => { d.photo = ''; showPhoto(); pop(); };
+    q('#phf').onchange = async () => {
+      const f = q('#phf').files[0]; q('#phf').value = ''; if (!f) return;
+      try { d.photo = await shrinkPhoto(f); showPhoto(); pop(); } catch { toast('That photo would not open. Try another one.'); }
+    };
     q('#cancel').onclick = close;
     q('#ok').onclick = () => {
       d.name = q('#nm').value.trim(); d.date = q('#dt').value; d.time = q('#tm').value; d.birthYear = q('#by').value;
@@ -429,7 +563,11 @@ function openEditor(existing) {
       if (!d.birthday) d.birthYear = '';
       if (isNew) { d.id = 'c' + Date.now().toString(36); d.made = Date.now(); S.customs.push(d); }
       else S.customs[S.customs.findIndex(c => c.id === d.id)] = d;
-      save(); close(); pop(); toast(isNew ? 'Countdown started!' : 'Saved');
+      if (!save()) {
+        if (!d.photo) { if (isNew) S.customs.pop(); toast('The phone is out of room. Delete an old countdown first.'); return; }
+        d.photo = ''; save(); toast('That photo was too big to keep, so it was left off.');
+      } else toast(isNew ? 'Countdown started!' : 'Saved');
+      close(); pop();
       if (isNew) location.hash = 'day=' + d.id; else route();
     };
     if (q('#del')) q('#del').onclick = () => {
@@ -451,6 +589,7 @@ function openSettings() {
   }).join('');
   const canBadge = 'setAppBadge' in navigator;
   sheet(`<h2>Settings</h2>
+    <label class="f" for="kn">Your first name</label><input type="text" id="kn" maxlength="20" autocomplete="off" placeholder="So Big Day can say hi" value="${esc(S.name)}">
     <label class="f">Count in</label><div class="seg" id="wd"><button data-w="days" class="${S.word === 'days' ? 'on' : ''}">Days</button><button data-w="sleeps" class="${S.word === 'sleeps' ? 'on' : ''}">Sleeps</button></div>
     <label class="f">Cards</label><div class="seg" id="lk"><button data-l="auto" class="${S.look === 'auto' ? 'on' : ''}">Match phone</button><button data-l="light" class="${S.look === 'light' ? 'on' : ''}">Light</button><button data-l="dark" class="${S.look === 'dark' ? 'on' : ''}">Dark</button></div>
     <div class="sw"><div class="tx">Holiday music<small>Plays that holiday's songs while you look at it.</small></div><button class="tog${S.music ? ' on' : ''}" id="msc" aria-label="Holiday music"></button></div>
@@ -481,18 +620,96 @@ function openSettings() {
       }
       if (ev.target.closest('#done')) close();
     });
+    el.querySelector('#kn').oninput = ev => { S.name = ev.target.value.trim(); save(); };
     const obs = new MutationObserver(() => { if (!el.isConnected) { obs.disconnect(); route(); } });
     obs.observe(document.body, { childList: true });
   });
 }
 
-async function share(e) {
-  const text = e.today ? `${greeting(e)} ${e.name} is today!` : `Only ${num(e.days)} ${word(e.days)} until ${e.name}!`;
-  const url = location.origin + location.pathname;
+// ---- sharing: a picture card to send, or just a link ----
+const shareText = e => e.today ? `${greeting(e)} ${e.name} is today!` : `Only ${num(e.days)} ${word(e.days)} until ${e.name}!`;
+async function shareLink(e) {
+  const text = shareText(e), url = location.origin + location.pathname;
   try {
     if (navigator.share) await navigator.share({ title: 'Big Day', text, url });
     else { await navigator.clipboard.writeText(`${text} ${url}`); toast('Copied! Paste it in a message.'); }
   } catch {}
+}
+// The picture is made first and shown, so the Send button can hand it straight to the phone's share menu
+// (iPhones refuse to share if the tap was too long ago).
+function share(e) {
+  sheet(`<h2>Share the countdown</h2>
+    <div class="cardprev" id="cp"><div class="small">Making your picture...</div></div>
+    <button class="btn" id="sp" disabled>Send the picture</button>
+    <button class="btn ghost" id="sl">Send a link instead</button>`, async (el, close) => {
+    const q = s => el.querySelector(s);
+    q('#sl').onclick = () => shareLink(e);
+    let file, url;
+    try {
+      const blob = await makeCard(e);
+      file = new File([blob], `${e.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-countdown.png`, { type: 'image/png' });
+      url = URL.createObjectURL(blob);
+      q('#cp').innerHTML = `<img src="${url}" alt="${esc(shareText(e))}">`;
+    } catch { q('#cp').innerHTML = '<div class="small">The picture would not draw. You can still send a link.</div>'; return; }
+    const canFile = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    q('#sp').disabled = false; if (!canFile) q('#sp').textContent = 'Save the picture';
+    q('#sp').onclick = async () => {
+      pop();
+      if (canFile) { try { await navigator.share({ files: [file], text: shareText(e) }); } catch {} return; }
+      const a = document.createElement('a'); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+      toast('Picture saved');
+    };
+  });
+}
+// A 1080 x 1350 picture (the shape phones show best): colors, the picture, the name and the count.
+async function makeCard(e) {
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'), th = THEMES[e.theme] || THEMES.party, party = e.today;
+  try { await document.fonts.load('700 100px Fredoka'); await document.fonts.load('900 40px Nunito'); } catch {}
+  const g = x.createLinearGradient(0, 0, W * 0.6, H); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // Confetti dots, the same every time.
+  let seed = 11; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  for (let i = 0; i < 70; i++) {
+    x.globalAlpha = 0.16 + rnd() * 0.22; x.fillStyle = CHAIN_COLORS[i % CHAIN_COLORS.length];
+    x.beginPath(); x.arc(rnd() * W, rnd() * H, 6 + rnd() * 14, 0, 7); x.fill();
+  }
+  x.globalAlpha = 1; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const DF = 'Fredoka, "Arial Rounded MT Bold", Arial, sans-serif', BF = 'Nunito, Arial, sans-serif';
+  // Tag at the top.
+  const tag = (S.name ? `${possessive(S.name)} countdown` : 'Countdown').toUpperCase();
+  x.font = `900 40px ${BF}`; const tw = x.measureText(tag).width + 72;
+  x.fillStyle = th.accent; x.beginPath(); x.roundRect(W / 2 - tw / 2, 70, tw, 70, 35); x.fill();
+  x.fillStyle = '#2a1a00'; x.fillText(tag, W / 2, 107);
+  // The picture: your photo in a white frame, or the drawing.
+  x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowOffsetY = 12;
+  if (e.photo) {
+    const im = await loadImg(e.photo), S0 = 440, px = W / 2 - S0 / 2, py = 180, k = Math.max(S0 / im.width, S0 / im.height);
+    x.fillStyle = '#fff'; x.beginPath(); x.roundRect(px - 14, py - 14, S0 + 28, S0 + 28, 64); x.fill();
+    x.save(); x.shadowColor = 'transparent'; x.beginPath(); x.roundRect(px, py, S0, S0, 52); x.clip();
+    x.drawImage(im, px + (S0 - im.width * k) / 2, py + (S0 - im.height * k) / 2, im.width * k, im.height * k); x.restore();
+  } else {
+    const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(icon(e.icon).replace('<svg ', '<svg width="512" height="512" ')));
+    x.drawImage(im, W / 2 - 230, 170, 460, 460);
+  }
+  x.shadowOffsetY = 6; x.shadowColor = 'rgba(0,0,0,.2)'; x.fillStyle = '#fff';
+  // Name, on up to two lines.
+  x.font = `700 88px ${DF}`;
+  const words = e.name.split(' '), lines = [''];
+  for (const w of words) { const t = lines[lines.length - 1] ? `${lines[lines.length - 1]} ${w}` : w; if (x.measureText(t).width > 960 && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; }
+  const shown = lines.slice(0, 2); let y = 700;
+  shown.forEach((l, i) => x.fillText(l, W / 2, y + i * 94)); y += (shown.length - 1) * 94;
+  if (party) {
+    x.font = `700 ${greeting(e).length > 16 ? 96 : 128}px ${DF}`; x.fillText(greeting(e), W / 2, y + 190);
+    x.font = `800 48px ${BF}`; x.fillText('is today!', W / 2, y + 310);
+  } else {
+    x.font = `700 ${e.days > 999 ? 220 : 270}px ${DF}`; x.fillText(num(e.days), W / 2, y + 200);
+    x.font = `700 64px ${DF}`; x.fillText(`${word(e.days)} to go!`, W / 2, y + 360);
+  }
+  x.shadowColor = 'transparent';
+  x.font = `800 40px ${BF}`; x.globalAlpha = 0.92; x.fillText(fmtDate(e.target), W / 2, y + 440);
+  x.globalAlpha = 0.8; x.font = `700 40px ${DF}`; x.fillText(`Big Day  ·  ${location.host}`, W / 2, H - 56); x.globalAlpha = 1;
+  return new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error('no picture')), 'image/png'));
 }
 
 // ---- the number on the icon ----
